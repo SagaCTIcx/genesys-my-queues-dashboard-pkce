@@ -1,0 +1,16 @@
+{
+  "name": "genesys-my-queues-dashboard-pkce",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 3000"
+  },
+  "dependencies": {
+    "@vitejs/plugin-basic-ssl": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {}
+}

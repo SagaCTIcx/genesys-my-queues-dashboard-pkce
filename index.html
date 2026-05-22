@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Queues Activity Dashboard - PKCE</title>
+  <script src="/config.js"></script>
+  <style>
+    :root { --bg:#f4f7fb; --card:#ffffff; --line:#d9e2ef; --text:#0b1f3a; --muted:#53657d; --blue:#2f5bea; --good:#087a36; --bad:#c5162e; --warn:#b35a00; --soft:#eef4ff; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text)}
+    header{background:white;border-bottom:1px solid var(--line);padding:22px 28px;display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+    h1{margin:0 0 6px;font-size:26px;letter-spacing:-.02em}.subtitle{color:var(--muted);font-size:14px}.last{font-size:13px;color:var(--muted);text-align:right}.wrap{padding:24px 28px 40px}.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+    button{border:0;border-radius:9px;background:var(--blue);color:white;font-weight:700;padding:10px 16px;cursor:pointer}button.secondary{background:#64748b}button.ghost{background:white;color:var(--text);border:1px solid var(--line)}button:disabled{opacity:.6;cursor:not-allowed}.status{font-size:14px;color:var(--muted)}
+    .error{background:#ffecef;border:1px solid #ffb8c2;color:#b00020;padding:12px 14px;border-radius:10px;margin-bottom:18px;white-space:pre-wrap}.grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:14px;margin-bottom:18px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.04)}.kpi{padding:18px}.kpi .label{color:var(--muted);font-size:13px;margin-bottom:10px}.kpi .value{font-size:32px;font-weight:800;letter-spacing:-.03em}.section{margin-top:18px;padding:18px}.section h2{font-size:18px;margin:0 0 12px}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px}.note{font-size:12px;color:var(--muted)}
+    .table-wrap{overflow:auto;border-radius:12px;border:1px solid var(--line);background:white}table{border-collapse:collapse;width:100%;min-width:1100px}th,td{padding:12px 13px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;font-size:14px}th{background:#f8fbff;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#10213d}tr:last-child td{border-bottom:0}.queue-name,.agent-name{font-weight:700}.num{text-align:right}.sl-good{color:var(--good);font-weight:800}.sl-bad{color:var(--bad);font-weight:800}.target{color:#8a96a8;font-weight:800}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--soft);font-size:12px;font-weight:700}.pill.good{background:#e8f7ee;color:var(--good)}.pill.bad{background:#ffecef;color:var(--bad)}.pill.warn{background:#fff5e8;color:var(--warn)}
+    .chart{height:310px;padding:10px 8px 4px}.chart svg{width:100%;height:100%;display:block}.axis{stroke:#c7d2e3;stroke-width:1}.gridline{stroke:#e5ebf5;stroke-width:1}.line{fill:none;stroke-width:3}.target-line{stroke:#d22;stroke-dasharray:6 6;stroke-width:2}.dot{stroke:white;stroke-width:2}.legend{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 0;font-size:12px;color:var(--muted)}.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:6px}.muted{color:var(--muted)}
+    .two-col{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}.small-table table{min-width:650px}.footer{margin-top:18px;color:var(--muted);font-size:12px}.hidden{display:none!important}@media(max-width:1100px){.grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}}@media(max-width:680px){header{display:block}.last{text-align:left;margin-top:10px}.grid{grid-template-columns:1fr}.wrap{padding:16px}h1{font-size:22px}}
+  </style>
+</head>
+<body>
+<header>
+  <div><h1>My Queues Activity Dashboard - PKCE</h1><div class="subtitle">Queues assigned to the logged-in user, refreshed automatically. No client secret is used in the browser.</div></div>
+  <div class="last"><div id="lastUpdated">Not loaded</div><div id="userLabel"></div></div>
+</header>
+<div class="wrap">
+  <div class="toolbar">
+    <button id="refreshBtn">Refresh now</button><button id="loginBtn" class="ghost">Login</button><button id="logoutBtn" class="secondary hidden">Logout</button><span id="loadStatus" class="status">Not loaded</span>
+  </div>
+  <div id="errorBox" class="error hidden"></div>
+  <div class="grid">
+    <div class="card kpi"><div class="label">Total Offered</div><div id="kpiOffered" class="value">-</div></div>
+    <div class="card kpi"><div class="label">Total Answered</div><div id="kpiAnswered" class="value">-</div></div>
+    <div class="card kpi"><div class="label">Total Abandoned</div><div id="kpiAbandoned" class="value">-</div></div>
+    <div class="card kpi"><div class="label">Currently Waiting</div><div id="kpiWaiting" class="value">-</div></div>
+  </div>
+  <div class="card section">
+    <div class="section-title"><h2>Queue statistics - day to now</h2><span class="note">Performance + activity/observation metrics</span></div>
+    <div class="table-wrap"><table id="queueTable"><thead><tr>
+      <th>Queue</th><th class="num">Waiting</th><th>Longest Waiting</th><th class="num">Offered</th><th class="num">Answer</th><th class="num">Abandon</th><th>Service Level</th><th>Avg Handle</th><th>Avg Wait</th><th>Max Wait</th><th class="num">On Queue</th><th class="num">Off Queue</th><th class="num">Interacting</th><th class="num">Idle</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="card section">
+    <div class="section-title"><h2>Service level by hour</h2><span class="note">Red dashed line = target service level</span></div>
+    <div id="slaChart" class="chart"></div><div id="legend" class="legend"></div>
+  </div>
+  <div class="two-col">
+    <div class="card section small-table">
+      <div class="section-title"><h2>Agent status by queue</h2><span class="note">Based on routing activity for the displayed queues</span></div>
+      <div class="table-wrap"><table id="agentTable"><thead><tr><th>Agent</th><th>Queue</th><th>Presence</th><th>Routing status</th><th>Status duration</th><th>Presence duration</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card section small-table">
+      <div class="section-title"><h2>Queue membership summary</h2><span class="note">Current observation counts</span></div>
+      <div class="table-wrap"><table id="summaryTable"><thead><tr><th>Queue</th><th class="num">Members</th><th class="num">Active</th><th class="num">On Queue</th><th class="num">Off Queue</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+  <div class="footer" id="intervalInfo"></div>
+</div>
+<script type="module">
+const cfg = window.APP_CONFIG || {};
+const region = cfg.region || 'mypurecloud.ie';
+const apiBase = `https://api.${region}`;
+const loginBase = `https://login.${region}`;
+const clientId = cfg.clientId || '';
+const redirectUri = cfg.redirectUri || `${window.location.origin}${window.location.pathname}`;
+const mediaType = cfg.mediaType || 'voice';
+const refreshSeconds = Number(cfg.refreshSeconds ?? 60);
+const timeZone = cfg.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+const defaultTarget = Number(cfg.defaultServiceLevelTarget ?? 0.8);
+const chartGranularity = cfg.chartGranularity || 'PT1H';
+const colors = ['#244a86','#0ea5b7','#7c3aed','#e879f9','#f59e0b','#10b981','#ef4444','#64748b'];
+let refreshTimer = null;
+let state = { token: null, queues: [], rows: [], agents: [] };
+const $ = (id)=>document.getElementById(id);
+function setStatus(s){ $('loadStatus').textContent=s; }
+function showError(err){ const box=$('errorBox'); box.textContent = err ? String(err.message || err) : ''; box.classList.toggle('hidden', !err); }
+function storageKey(k){ return `gcMyQueuesPkce:${k}`; }
+function base64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+async function sha256(str){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); }
+function randomString(len=64){ const a=new Uint8Array(len); crypto.getRandomValues(a); return Array.from(a,b=>('0'+b.toString(16)).slice(-2)).join(''); }
+async function login(){
+  if(!clientId || clientId.includes('PASTE_')) throw new Error('Please set clientId in public/config.js');
+  const verifier=randomString(48); const challenge=base64url(await sha256(verifier)); const oauthState=randomString(16);
+  localStorage.setItem(storageKey('verifier'), verifier); localStorage.setItem(storageKey('state'), oauthState);
+  const params=new URLSearchParams({ response_type:'code', client_id:clientId, redirect_uri:redirectUri, state:oauthState, code_challenge:challenge, code_challenge_method:'S256' });
+  window.location.href=`${loginBase}/oauth/authorize?${params}`;
+}
+async function handleCallback(){
+  const url=new URL(window.location.href); const code=url.searchParams.get('code'); const returnedState=url.searchParams.get('state');
+  if(!code) return false;
+  const expected=localStorage.getItem(storageKey('state')); const verifier=localStorage.getItem(storageKey('verifier'));
+  if(expected && returnedState !== expected) throw new Error('OAuth state validation failed. Please login again.');
+  const body=new URLSearchParams({ grant_type:'authorization_code', client_id:clientId, redirect_uri:redirectUri, code, code_verifier:verifier });
+  const res=await fetch(`${loginBase}/oauth/token`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
+  const json=await res.json().catch(()=>({})); if(!res.ok) throw new Error(`Token exchange failed: ${res.status} ${JSON.stringify(json)}`);
+  const expiresAt=Date.now()+((json.expires_in||3600)-60)*1000;
+  localStorage.setItem(storageKey('token'), json.access_token); localStorage.setItem(storageKey('expiresAt'), String(expiresAt));
+  localStorage.removeItem(storageKey('verifier')); localStorage.removeItem(storageKey('state'));
+  history.replaceState({}, document.title, redirectUri);
+  state.token=json.access_token; return true;
+}
+function loadToken(){ const t=localStorage.getItem(storageKey('token')); const exp=Number(localStorage.getItem(storageKey('expiresAt'))||0); if(t && Date.now()<exp){ state.token=t; return true;} return false; }
+function logout(){ localStorage.removeItem(storageKey('token')); localStorage.removeItem(storageKey('expiresAt')); state.token=null; location.reload(); }
+async function gc(path, opts={}){
+  if(!state.token) throw new Error('Not authenticated.');
+  const res=await fetch(`${apiBase}${path}`, { ...opts, headers:{ 'Authorization':`Bearer ${state.token}`, 'Content-Type':'application/json', ...(opts.headers||{}) }});
+  const text=await res.text(); let json=null; try{ json=text?JSON.parse(text):null; }catch{ json=text; }
+  if(res.status===401){ logout(); return; }
+  if(!res.ok) throw new Error(`${path} failed: ${res.status} ${typeof json==='string'?json:JSON.stringify(json)}`);
+  return json;
+}
+function dayStartUtcIso(){
+  const now=new Date();
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now).reduce((a,p)=>(a[p.type]=p.value,a),{});
+  const localMidnight = new Date(`${parts.year}-${parts.month}-${parts.day}T00:00:00`);
+  const tzOffsetMin = -new Date(localMidnight.toLocaleString('en-US',{timeZone:'UTC'})).getTimezoneOffset();
+  // More reliable for EU use: derive offset between displayed timezone and UTC around now.
+  const utcDate = new Date(Date.UTC(+parts.year,+parts.month-1,+parts.day,0,0,0));
+  const asTz = new Date(utcDate.toLocaleString('en-US',{timeZone}));
+  const asUtc = new Date(utcDate.toLocaleString('en-US',{timeZone:'UTC'}));
+  const offset = asTz.getTime() - asUtc.getTime();
+  return new Date(utcDate.getTime() - offset).toISOString();
+}
+function intervalDayToNow(){ return `${dayStartUtcIso()}/${new Date().toISOString()}`; }
+async function getMyQueues(){
+  let page=1, out=[];
+  while(true){
+    const data=await gc(`/api/v2/routing/queues/me?pageSize=100&pageNumber=${page}&sortOrder=asc`);
+    out=out.concat(data.entities||[]);
+    if(!data.pageCount || page>=data.pageCount) break; page++;
+  }
+  const allow=new Set(cfg.queueIdAllowList||[]); const deny=new Set(cfg.queueIdDenyList||[]);
+  return out.filter(q => (!cfg.onlyJoinedQueues || q.joined) && (!allow.size || allow.has(q.id)) && !deny.has(q.id));
+}
+function queueFilter(queueIds){ return { type:'and', clauses:[{ type:'or', predicates:queueIds.map(id=>({ type:'dimension', dimension:'queueId', value:id })) }]}; }
+function queueAndMediaFilter(queueIds){ return { type:'and', clauses:[{ type:'or', predicates:queueIds.map(id=>({ dimension:'queueId', value:id })) },{ type:'or', predicates:[{ type:'dimension', dimension:'mediaType', value:mediaType }]}]}; }
+async function getDailyAggregates(queueIds){
+  return gc('/api/v2/analytics/conversations/aggregates/query',{method:'POST',body:JSON.stringify({filter:queueAndMediaFilter(queueIds),metrics:['oServiceLevel','nOffered','tAbandon','tAnswered','tHandle','tWait'],groupBy:['queueId'],interval:intervalDayToNow()})});
+}
+async function getHourlySla(queueIds){
+  return gc('/api/v2/analytics/conversations/aggregates/query',{method:'POST',body:JSON.stringify({filter:queueAndMediaFilter(queueIds),metrics:['oServiceLevel'],groupBy:['queueId'],interval:intervalDayToNow(),granularity:chartGranularity})});
+}
+async function getObservations(queueIds){
+  return gc('/api/v2/analytics/queues/observations/query',{method:'POST',body:JSON.stringify({metrics:['oWaiting','oInteracting','oAlerting','oMemberUsers','oActiveUsers','oOnQueueUsers','oOffQueueUsers','oLongestWaiting','oLongestInteracting'],filter:queueFilter(queueIds)})});
+}
+async function getRoutingActivity(queueIds){
+  return gc('/api/v2/analytics/routing/activity/query?pageNumber=1&pageSize=100',{method:'POST',body:JSON.stringify({order:'asc',filter:queueFilter(queueIds),groupBy:['queueId'],metrics:[{metric:'oUserRoutingStatuses',details:true},{metric:'oUserPresences',details:true},{metric:'oMemberUsers',details:true}],subscribe:false})});
+}
+async function getUserMap(ids){
+  const unique=[...new Set(ids)].filter(Boolean); const map={};
+  for(let i=0;i<unique.length;i+=50){
+    const chunk=unique.slice(i,i+50);
+    try{
+      const qs=chunk.map(id=>`id=${encodeURIComponent(id)}`).join('&');
+      const data=await gc(`/api/v2/users?${qs}&pageSize=100`);
+      for(const u of data.entities||[]) map[u.id]=u.name || u.displayName || u.email || u.id;
+    }catch(e){ console.warn('User lookup failed, using ids', e); }
+  }
+  return map;
+}
+function metricMap(result){ const m={}; for(const d of result?.data?.[0]?.metrics||[]) m[d.metric]=d.stats||{}; return m; }
+function countStats(data, metric, qualifier=null){ return (data||[]).filter(d=>d.metric===metric && (qualifier===null || d.qualifier===qualifier)).reduce((s,d)=>s+(d.stats?.count||d.count||0),0); }
+function obsByQueue(obs, qid){ return (obs.results||[]).filter(r=>r.group?.queueId===qid); }
+function msAvg(stats){ if(!stats || !stats.count) return null; return stats.sum/stats.count; }
+function fmtNum(n){ return Number.isFinite(n)?String(n):'-'; }
+function fmtPct(r){ return Number.isFinite(r)?`${Math.round(r*100)}%`:'-'; }
+function fmtMs(ms){ if(!Number.isFinite(ms)) return '-'; const s=Math.round(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60; if(h) return `${h}h ${m}m`; if(m) return `${m}m ${sec}s`; return `${sec}s`; }
+function fmtDurationSince(iso){ if(!iso) return '-'; return fmtMs(Date.now()-new Date(iso).getTime()); }
+function escapeHtml(s){ return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function statusPill(text){ const t=String(text||'-'); const c=/AVAILABLE|IDLE|ON_QUEUE/.test(t)?'good':/OFFLINE|OFF_QUEUE/.test(t)?'bad':'warn'; return `<span class="pill ${c}">${escapeHtml(t.replaceAll('_',' '))}</span>`; }
+async function refresh(){
+  showError(null); setStatus('Loading...'); $('refreshBtn').disabled=true;
+  try{
+    const queues=await getMyQueues(); state.queues=queues; const ids=queues.map(q=>q.id);
+    if(!ids.length) throw new Error('No queues returned for the logged-in user.');
+    const [daily, obs, routing, hourly] = await Promise.all([getDailyAggregates(ids), getObservations(ids), getRoutingActivity(ids), getHourlySla(ids)]);
+    const dailyByQ={}; for(const r of daily.results||[]) dailyByQ[r.group.queueId]=metricMap(r);
+    const routingByQ={}; const userIds=[]; for(const r of routing.results||[]){ routingByQ[r.group.queueId]=r; for(const e of r.entities||[]) userIds.push(e.userId); }
+    const userMap=await getUserMap(userIds);
+    const rows=queues.map(q=>{
+      const dm=dailyByQ[q.id]||{}; const obsRows=obsByQueue(obs,q.id);
+      const mediaObs=obsRows.filter(r=>!r.group.mediaType || r.group.mediaType===mediaType).flatMap(r=>r.data||[]);
+      const noMediaObs=obsRows.filter(r=>!r.group.mediaType).flatMap(r=>r.data||[]);
+      const offered=dm.nOffered?.count||0, answer=dm.tAnswered?.count||0, abandon=dm.tAbandon?.count||0;
+      const sl=dm.oServiceLevel?.ratio, target=dm.oServiceLevel?.target ?? defaultTarget;
+      return { id:q.id, name:q.name, waiting:countStats(mediaObs,'oWaiting'), interacting:countStats(mediaObs,'oInteracting'), longestWaiting: Math.max(0,...mediaObs.filter(d=>d.metric==='oLongestWaiting').map(d=>d.stats?.max||0)), offered, answer, abandon, serviceLevel:sl, target, avgHandle:msAvg(dm.tHandle), avgWait:msAvg(dm.tWait), maxWait:dm.tWait?.max, onQueue:countStats(noMediaObs,'oOnQueueUsers'), offQueue:countStats(noMediaObs,'oOffQueueUsers'), members:countStats(noMediaObs,'oMemberUsers'), active:countStats(noMediaObs,'oActiveUsers'), idle: countStats(noMediaObs,'oOnQueueUsers','IDLE') };
+    });
+    const agents=[];
+    for(const q of queues){ const rr=routingByQ[q.id]; for(const e of rr?.entities||[]){ agents.push({ queue:q.name, name:userMap[e.userId]||e.userId, presence:e.systemPresence, routing:e.routingStatus, statusDuration:fmtDurationSince(e.routingStatusDate), presenceDuration:fmtDurationSince(e.presenceDate) }); }}
+    state.rows=rows; state.agents=agents; render(rows, agents, hourly);
+    $('lastUpdated').textContent=`Last updated: ${new Date().toLocaleString()}`; $('userLabel').textContent=`Region: ${region}`; setStatus('Loaded');
+  }catch(e){ console.error(e); showError(e); setStatus('Error'); }
+  finally{ $('refreshBtn').disabled=false; }
+}
+function render(rows, agents, hourly){
+  const totals=rows.reduce((a,r)=>{a.offered+=r.offered;a.answer+=r.answer;a.abandon+=r.abandon;a.waiting+=r.waiting;return a;},{offered:0,answer:0,abandon:0,waiting:0});
+  $('kpiOffered').textContent=totals.offered; $('kpiAnswered').textContent=totals.answer; $('kpiAbandoned').textContent=totals.abandon; $('kpiWaiting').textContent=totals.waiting;
+  $('queueTable').querySelector('tbody').innerHTML=rows.map(r=>`<tr><td class="queue-name">${escapeHtml(r.name)}</td><td class="num">${r.waiting}</td><td>${fmtMs(r.longestWaiting)}</td><td class="num">${r.offered}</td><td class="num">${r.answer}</td><td class="num">${r.abandon}</td><td><span class="${(r.serviceLevel??0)>=r.target?'sl-good':'sl-bad'}">${fmtPct(r.serviceLevel)}</span> <span class="target">/ ${fmtPct(r.target)}</span></td><td>${fmtMs(r.avgHandle)}</td><td>${fmtMs(r.avgWait)}</td><td>${fmtMs(r.maxWait)}</td><td class="num">${r.onQueue}</td><td class="num">${r.offQueue}</td><td class="num">${r.interacting}</td><td class="num">${r.idle}</td></tr>`).join('');
+  $('summaryTable').querySelector('tbody').innerHTML=rows.map(r=>`<tr><td class="queue-name">${escapeHtml(r.name)}</td><td class="num">${r.members}</td><td class="num">${r.active}</td><td class="num">${r.onQueue}</td><td class="num">${r.offQueue}</td></tr>`).join('');
+  $('agentTable').querySelector('tbody').innerHTML=agents.sort((a,b)=>a.queue.localeCompare(b.queue)||a.name.localeCompare(b.name)).map(a=>`<tr><td class="agent-name">${escapeHtml(a.name)}</td><td>${escapeHtml(a.queue)}</td><td>${statusPill(a.presence)}</td><td>${statusPill(a.routing)}</td><td>${a.statusDuration}</td><td>${a.presenceDuration}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">No agent data returned.</td></tr>';
+  renderChart(hourly, rows);
+  $('intervalInfo').textContent=`Interval: ${intervalDayToNow()} | Time zone: ${timeZone} | Media type: ${mediaType} | Queues: ${rows.length}`;
+}
+function renderChart(hourly, rows){
+  const qName=Object.fromEntries(rows.map(r=>[r.id,r.name])); const series={}; const labels=new Set();
+  for(const r of hourly.results||[]){ const qid=r.group.queueId; for(const bucket of r.data||[]){ const sl=(bucket.metrics||[]).find(m=>m.metric==='oServiceLevel')?.stats; const x=bucket.interval?.split('/')[0]; if(!x) continue; labels.add(x); (series[qid] ||= {})[x]=Number.isFinite(sl?.ratio)?sl.ratio:null; }}
+  const xs=[...labels].sort(); const width=1000, height=260, pad={l:46,r:20,t:15,b:38}; const plotW=width-pad.l-pad.r, plotH=height-pad.t-pad.b;
+  const xPos=(i)=>pad.l+(xs.length<=1?plotW/2:i*plotW/(xs.length-1)); const yPos=(v)=>pad.t+(1-v)*plotH;
+  let svg=`<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">`;
+  for(let p=0;p<=1.001;p+=0.2){ const y=yPos(p); svg+=`<line class="gridline" x1="${pad.l}" y1="${y}" x2="${width-pad.r}" y2="${y}"/><text x="4" y="${y+4}" font-size="12" fill="#53657d">${Math.round(p*100)}%</text>`; }
+  svg+=`<line class="target-line" x1="${pad.l}" y1="${yPos(defaultTarget)}" x2="${width-pad.r}" y2="${yPos(defaultTarget)}"/>`;
+  xs.forEach((x,i)=>{ if(i%Math.ceil(xs.length/8||1)===0){ const d=new Date(x); const lbl=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); svg+=`<text x="${xPos(i)-18}" y="${height-10}" font-size="12" fill="#53657d">${lbl}</text>`; }});
+  Object.keys(series).forEach((qid,si)=>{ const col=colors[si%colors.length]; let d=''; xs.forEach((x,i)=>{ const v=series[qid][x]; if(v==null) return; d+=`${d?'L':'M'} ${xPos(i)} ${yPos(v)} `; }); if(d) svg+=`<path d="${d}" class="line" stroke="${col}"/>`; xs.forEach((x,i)=>{ const v=series[qid][x]; if(v!=null) svg+=`<circle class="dot" cx="${xPos(i)}" cy="${yPos(v)}" r="4" fill="${col}"/>`; }); });
+  svg+='</svg>'; $('slaChart').innerHTML=svg; $('legend').innerHTML=Object.keys(series).map((qid,i)=>`<span style="--c:${colors[i%colors.length]}">${escapeHtml(qName[qid]||qid)}</span>`).join('') + `<span style="--c:#d22">Target ${fmtPct(defaultTarget)}</span>`;
+}
+async function init(){
+  $('refreshBtn').onclick=refresh; $('loginBtn').onclick=()=>login().catch(showError); $('logoutBtn').onclick=logout;
+  try{ await handleCallback(); }catch(e){ showError(e); }
+  if(loadToken() || state.token){ $('loginBtn').classList.add('hidden'); $('logoutBtn').classList.remove('hidden'); await refresh(); if(refreshSeconds>0){ refreshTimer=setInterval(refresh, refreshSeconds*1000); } }
+  else { setStatus('Please login'); }
+}
+init();
+</script>
+</body>
+</html>
