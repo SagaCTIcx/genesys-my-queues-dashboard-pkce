@@ -8,7 +8,7 @@ window.APP_CONFIG = {
 
   // Leave empty to use current URL origin/path, e.g. http://localhost:3000/ or https://your-app.vercel.app/
   // Add every redirect URI you use into the Genesys Cloud OAuth client configuration.
-  redirectUri: "http://localhost:3000/",
+  redirectUri: "https://genesys-my-queues-dashboard-pkce.vercel.app/",
 
   // Main media type for queue performance statistics.
   mediaType: "voice",
